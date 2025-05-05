@@ -19,6 +19,12 @@ module.exports = {
         .setName("createserver")
         .setDescription("Use este comando para iniciar seu servidor")
         .addStringOption((options) => options.setName("versão").setDescription("versão escolhida para o servidor").setRequired(true))
+        .addStringOption((options) =>
+          options
+            .setName("modoonline")
+            .setDescription("Configure seu servidor para rodar no modo original ou pirata.")
+            .addChoices( { name: "Original", value: 'true' }, { name: "Pirata", value: 'false' } )
+        )
     )
     .addSubcommand((options) =>
         options
@@ -101,8 +107,10 @@ module.exports = {
           port = Math.max(...portData.map((data) => data.serverPort)) + 1
         }
 
+        const onlinemode = options.getString('modoonline') == true ? "TRUE" : "FALSE"
+
         try {
-          await exec(`docker run -t -i -d -v /home/pedrohcs8/${port}:/data -e VERSION=${version} -e ONLINE_MODE=FALSE -e MEMORY=512m -p ${port}:${port} -e SERVER_PORT=${port} -e EULA=TRUE --name ${port} itzg/minecraft-server:${java_version}`)
+          await exec(`docker run -t -i -d -v /home/pedrohcs8/${port}:/data -e VERSION=${version} -e ONLINE_MODE=${onlinemode} -e MEMORY=512m -p ${port}:${port} -e SERVER_PORT=${port} -e EULA=TRUE --name ${port} itzg/minecraft-server:${java_version}`)
         } catch(e) {
           console.log(e)
           return interaction.editReply(`Um erro ocorreu, contate um administrador.`)
@@ -184,7 +192,14 @@ module.exports = {
           return interaction.editReply("Você ainda não criou seu servidor! Use o comando /controlserver createserver para criá-lo.")
         }
 
-        const command = options.getString("comando")
+        let command
+
+        command = options.getString("comando")
+
+        if (command.charAt(0) == '/') {
+          command = command.replace('/', '')
+        }
+
         let out;
 
         try {
@@ -193,6 +208,10 @@ module.exports = {
         } catch(e) {
           console.log(e)
           return interaction.editReply(`Um erro ocorreu, contate um administrador.`)
+        }
+
+        if (out == null) {
+          return interaction.editReply(`Talvez este comando não tenha funcionado, não tive nenhum retorno.`)
         }
 
         return interaction.editReply(`Comando realizado com sucesso! Retorno: ``${out}```)
