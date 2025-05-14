@@ -1,13 +1,16 @@
 const {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
+  Client,
+  inlineCode
 } = require('discord.js')
 
 const userSchema = require('@schemas/userSchema')
 
 const util = require('util');
 const exec = util.promisify(require('child_process').exec);
-const { publicIPV4, replaceLine }= require('@root/util/Utils')
+const { publicIPV4, replaceLine, findPort, configureSubdomain }= require('@root/util/Utils')
+const fs = require('fs')
 
 module.exports = {
   subsincluded: true,
@@ -23,7 +26,8 @@ module.exports = {
           options
             .setName("modoonline")
             .setDescription("Configure seu servidor para rodar no modo original ou pirata.")
-            .addChoices( { name: "Original", value: 'true' }, { name: "Pirata", value: 'false' } )
+            .addChoices( { name: "Original", value: 'TRUE' }, { name: "Pirata", value: 'FALSE' } )
+            .setRequired(true)
         )
     )
     .addSubcommand((options) =>
@@ -57,12 +61,17 @@ module.exports = {
   /**
    *
    * @param {ChatInputCommandInteraction} interaction
+   * @param {Client} client
    */
 
-  async execute(interaction) {
+  async execute(interaction, client) {
     const { options, user } = interaction
 
     const data = await userSchema.findOne({ userId: user.id })
+
+    if (!data) {
+      return interaction.reply("Você não está cadastrado no sistema. Use /register")
+    }
 
     await interaction.deferReply();
 
@@ -97,30 +106,33 @@ module.exports = {
         }
 
         let port;
-        const portData = await require("mongoose").connection.collection('users').find({}).toArray()
+
+        const portData = await findPort()
 
         console.log(portData)
 
-        if (portData == null || portData.length <= 1) {
+        if (portData == undefined) {
           port = 25576
         } else {
-          port = Math.max(...portData.map((data) => data.serverPort)) + 1
+          port = portData
         }
 
-        const onlinemode = options.getString('modoonline') == true ? "TRUE" : "FALSE"
+        const ip = await publicIPV4()
+
+        const onlinemode = options.getString('modoonline')
 
         try {
           await exec(`docker run -t -i -d -v /home/pedrohcs8/${port}:/data -e VERSION=${version} -e ONLINE_MODE=${onlinemode} -e MEMORY=512m -p ${port}:${port} -e SERVER_PORT=${port} -e EULA=TRUE --name ${port} itzg/minecraft-server:${java_version}`)
+
+          await configureSubdomain(user.username.toLowerCase(), port, ip)
         } catch(e) {
           console.log(e)
           return interaction.editReply(`Um erro ocorreu, contate um administrador.`)
         }
 
-        const ip = await publicIPV4()
-
         await userSchema.findOneAndUpdate({ userId: user.id }, { serverCreated: true, serverPort: port })
 
-        return interaction.editReply(`Server criado com sucesso, em alguns momentos você poderá acessá-lo pelo IP: ${ip}:${port}`)
+        return interaction.editReply(`Server criado com sucesso, em alguns momentos você poderá acessá-lo pelo link: ${user.username}.basedes.com`)
       }
 
       case 'deleteserver': {
@@ -135,12 +147,14 @@ module.exports = {
         try {
           await exec(`docker stop ${data.serverPort}`)
           await exec(`docker rm ${data.serverPort}`)
+
+          fs.rmdir(`/home/pedrohcs8/${data.serverPort}`);
         } catch(e) {
           console.log(e)
           return interaction.editReply(`Um erro ocorreu, contate um administrador.`)
         }
 
-        await userSchema.findOneAndUpdate({ userId: user.id }, { serverCreated: false })
+        await userSchema.findOneAndUpdate({ userId: user.id }, { serverCreated: false, serverPort: null })
 
         await interaction.editReply("Servidor deletado com sucesso!")
       }
@@ -207,6 +221,11 @@ module.exports = {
           out = stdout
         } catch(e) {
           console.log(e)
+
+          if (e.contains("not running")) {
+            return interaction.reply("Seu servidor não está rodando, inicie ele primeiro")
+          }
+
           return interaction.editReply(`Um erro ocorreu, contate um administrador.`)
         }
 
@@ -214,7 +233,7 @@ module.exports = {
           return interaction.editReply(`Talvez este comando não tenha funcionado, não tive nenhum retorno.`)
         }
 
-        return interaction.editReply(`Comando realizado com sucesso! Retorno: ``${out}```)
+        return interaction.editReply(`Comando realizado com sucesso! Retorno: ${inlineCode(out)}`)
       }
 
       case 'changemotd': {

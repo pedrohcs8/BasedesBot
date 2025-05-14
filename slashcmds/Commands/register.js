@@ -22,7 +22,7 @@ module.exports = {
       return interaction.reply(`Você já está cadastrado no sistema.`)
     }
 
-    await userSchema.create({ username: user.globalName, userId: user.id, serverPort: 0, serverCreated: false, allowed: false })
+    await userSchema.create({ username: user.username, userId: user.id, serverPort: 0, serverCreated: false, allowed: false })
     interaction.reply("Cadastrado com sucesso")
   },
 }

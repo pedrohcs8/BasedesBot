@@ -1,6 +1,6 @@
 {
   "name": "renatinho",
-  "version": "2.1",
+  "version": "2.2",
   "description": "Um simples bot criado por pedrohcs8 :)",
   "main": "index.js",
   "directories": {
@@ -34,7 +34,7 @@
     "@iamtraction/google-translate": "^1.1.2",
     "aki-api": "^6.0.9",
     "ascii-table": "^0.0.9",
-    "canvacord": "^5.2.3",
+    "axios": "^1.9.0",
     "colors": "^1.4.0",
     "danitto-meme-api": "^1.0.2",
     "discord-arts": "^0.4.0",

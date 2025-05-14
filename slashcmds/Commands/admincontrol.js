@@ -53,6 +53,8 @@ module.exports = {
         try {
           await exec(`docker stop ${data.serverPort}`)
           await exec(`docker rm ${data.serverPort}`)
+
+          fs.rmdir(`/home/pedrohcs8/${data.serverPort}`);
         } catch(e) {
           console.log(e)
           return interaction.editReply(`Um erro ocorreu.`)
