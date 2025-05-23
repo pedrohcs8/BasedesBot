@@ -1,6 +1,6 @@
 🇧🇷
 
-Bot comandando as operações da Basaedes.
+Bot comandando as operações da Basedes.
 
 Servidor Oficial do Discord: https://discord.gg/yYsgRD9vWZ
 
